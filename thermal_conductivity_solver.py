@@ -6,10 +6,10 @@ from sympy.integrals.meijerint import _mul_as_two_parts
 def get_coefficients(expr):
     """
     Возвращает коэффициенты c_i и n_i линейной комбинации
-    вида Sum(c_i*(sin(n_i)))
+    вида Sum(c_i * (sin(n_i * x)))
     
     Args: 
-        expr (sympy.Function): линейная комбинация вида sum(c_i*sin(n_i*x))
+        expr (sympy.Function): линейная комбинация вида sum(c_i * sin(n_i * x))
 
     Returns:
         tuple([c_i], [n_i])
@@ -29,13 +29,13 @@ def get_coefficients(expr):
 
     # Итерируемся по слагаемым, записываем коэффициеты
     for term in terms:
-        if isinstance(term, sp.sin):
+        if isinstance(term, sp.sin) or isinstance(term, sp.cos):
             c.append(sp.Integer(1))
             n.append(term.args[0] / x)
         elif isinstance(term, sp.Mul):
             c.append(term.args[0])
             sin = term.args[1]
-            n.append(sin.args[0]/x)
+            n.append(sin.args[0] / x)
 
     return (c, n)
 
@@ -63,7 +63,7 @@ def quotient(a, f):
     k = - sp.diff(G, x, 2) / G
 
     # решаем дифур w'(t) = -a**2 * k**2 * w(t) + F(t)
-    diff_eq = sp.Eq(sp.diff(w,t), -a*k*w + F)
+    diff_eq = sp.Eq(sp.diff(w,t), - a * k * w + F)
     solution = sp.dsolve(diff_eq).rhs
 
     return solution.subs('C1', 0) * G
@@ -91,7 +91,7 @@ def solve_dirichlet(a, phi, f = None):
     c, n = get_coefficients(phi)
     answer = sp.Integer(0)
     for i in range(len(n)):
-        answer += с[i]*sp.exp(-a*(n[i]**2)*t)*sp.sin(n[i]*x)
+        answer += c[i]*sp.exp(-a * (n[i] ** 2) * t) * sp.sin(n[i] * x)
 
     # Находим частное решение
     if f != None:
@@ -102,4 +102,28 @@ def solve_dirichlet(a, phi, f = None):
             answer += quotient(a, f)
 
     return answer
+
+
+def solve_neyman(a, phi, f = None):
+    x, t = sp.symbols('x t')
+
+    # Понизим степени тригонометрических функций 
+    phi = TRpower(phi)
+    
+
+    # Находим общее решение
+    c, n = get_coefficients(phi)
+    answer = sp.Integer(0)
+    for i in range(len(n)):
+        answer += c[i]*sp.exp(-a*(n[i]**2)*t)*sp.cos(n[i]*x)
+
+    # Находим частное решение
+    if f != None:
+        if f.func == sp.Add:
+            for component in f.args:
+                answer += quotient(a, component)
+        else:
+            answer += quotient(a, f)
+    
+    return answer + phi.as_independent(x, as_Add=True)[0]
 
