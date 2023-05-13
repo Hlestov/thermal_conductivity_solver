@@ -36,7 +36,6 @@ def get_coefficients(expr):
             c.append(term.args[0])
             sin = term.args[1]
             n.append(sin.args[0] / x)
-
     return (c, n)
 
 
@@ -59,14 +58,15 @@ def quotient(a, f):
     f = _mul_as_two_parts(f)[0]
     F, G = (f[0], f[1]) if f[0].free_symbols == {t} else (f[1], f[0])
 
+
     # Находим коэффициент k^2
     k = - sp.diff(G, x, 2) / G
 
     # решаем дифур w'(t) = -a**2 * k**2 * w(t) + F(t)
     diff_eq = sp.Eq(sp.diff(w,t), - a * k * w + F)
     solution = sp.dsolve(diff_eq).rhs
-
-    return solution.subs('C1', 0) * G
+    C1 = sp.solve(solution.subs(t, 0).subs(w, 0), 'C1')[0]
+    return solution.subs('C1', C1) * G
 
 
 def solve_dirichlet(a, phi, f = None):
@@ -105,12 +105,23 @@ def solve_dirichlet(a, phi, f = None):
 
 
 def solve_neyman(a, phi, f = None):
+    """
+    Решает задачу Неймана уравнения теплопроводности
+
+    Args:
+        a (int): Параметр уравнения
+        phi (sympy.Function): Граничное условие
+        f (sympy.Function): Неоднородность уравнения
+
+    Returns:
+        sympy.Function: Решение уравнения
+    """
+
     x, t = sp.symbols('x t')
 
     # Понизим степени тригонометрических функций 
     phi = TRpower(phi)
     
-
     # Находим общее решение
     c, n = get_coefficients(phi)
     answer = sp.Integer(0)
